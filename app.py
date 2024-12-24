@@ -5,9 +5,10 @@ import os
 
 app = Flask(__name__)
 
-# Sadece Netlify'dan gelen istekleri kabul et
+# Sadece Netlify domainine izin ver
 CORS(app, resources={r"/*": {"origins": "https://restrictionviewer.netlify.app"}})
 
+# API Key'i alın
 API_KEY = os.getenv("YOUTUBE_API_KEY")
 if not API_KEY:
     raise ValueError("YouTube API Key bulunamadı. Lütfen YOUTUBE_API_KEY çevre değişkenini ayarlayın.")
@@ -42,13 +43,19 @@ def check_video():
 
         video_info = response["items"][0]
         restrictions = video_info.get("contentDetails", {}).get("regionRestriction", {})
+        embeddable = video_info.get("status", {}).get("embeddable", True)
 
         return jsonify({
             "status": "success",
-            "restrictions": restrictions
+            "restrictions": restrictions,
+            "embeddable": embeddable
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/healthz", methods=["GET"])
+def health_check():
+    return jsonify({"status": "ok", "message": "Backend is running"})
 
 if __name__ == "__main__":
     app.run(debug=True)
