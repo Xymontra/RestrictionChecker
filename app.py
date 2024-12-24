@@ -55,5 +55,25 @@ def check_video():
 def health_check():
     return jsonify({"status": "ok", "message": "Backend is running"})
 
+@app.route("/check_youtube", methods=["GET"])
+def check_youtube():
+    try:
+        # Test amaçlı bir video ID'si kullanıyoruz
+        test_video_id = "lZ9hUrTrgTc"  # Örnek bir video ID
+        request_data = youtube.videos().list(
+            part="id",
+            id=test_video_id
+        )
+        response = request_data.execute()
+
+        # Eğer bir sonuç dönerse API çalışıyor demektir
+        if "items" in response and len(response["items"]) > 0:
+            return jsonify({"status": "Operational"}), 200
+        else:
+            return jsonify({"status": "Error"}), 500
+    except Exception as e:
+        # Hata durumunda detaylı bilgi döner
+        return jsonify({"status": "Error", "message": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(debug=True)
