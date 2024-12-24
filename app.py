@@ -4,9 +4,7 @@ from flask_cors import CORS
 import os
 
 app = Flask(__name__)
-
-# Sadece Netlify domainine izin ver
-CORS(app, resources={r"/*": {"origins": "https://restrictionviewer.netlify.app"}})
+CORS(app, origins=["https://restrictionchecker.onrender.com", "https://restrictionviewer.netlify.app"])
 
 # API Key'i alın
 API_KEY = os.getenv("YOUTUBE_API_KEY")
