@@ -1,3 +1,5 @@
+import json
+from datetime import datetime
 from flask import Flask, request, jsonify
 from googleapiclient.discovery import build
 from flask_cors import CORS
@@ -73,7 +75,35 @@ def check_youtube():
             return jsonify({"status": "Error"}), 500
     except Exception as e:
         # Hata durumunda detaylı bilgi döner
-        return jsonify({"status": "Error", "message": str(e)}), 500
+        return jsonify({"status": "Error", "message": str(e)}), 
+        
+# Kullanım verilerini tutmak için bir JSON dosyası
+USAGE_LOG_FILE = "usage_log.json"
+
+# Kullanım verilerini yükle
+def load_usage_data():
+    try:
+        with open(USAGE_LOG_FILE, "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return []
+
+# Kullanım verilerini kaydet
+def save_usage_data(data):
+    with open(USAGE_LOG_FILE, "w") as f:
+        json.dump(data, f)
+
+@app.route("/log_usage", methods=["POST"])
+def log_usage():
+    usage_data = load_usage_data()
+    usage_data.append({"timestamp": datetime.now().isoformat()})
+    save_usage_data(usage_data)
+    return jsonify({"status": "success", "message": "Usage logged"})
+
+@app.route("/get_usage", methods=["GET"])
+def get_usage():
+    usage_data = load_usage_data()
+    return jsonify(usage_data)
 
 if __name__ == "__main__":
     app.run(debug=True)
