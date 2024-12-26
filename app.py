@@ -1,9 +1,11 @@
+import os
 import json
+import firebase_admin
+from firebase_admin import credentials, db
 from datetime import datetime
 from flask import Flask, request, jsonify
 from googleapiclient.discovery import build
 from flask_cors import CORS
-import os
 
 app = Flask(__name__)
 CORS(app, origins=["https://restrictionchecker.onrender.com", "https://restrictionviewer.netlify.app"])
@@ -77,33 +79,41 @@ def check_youtube():
         # Hata durumunda detaylı bilgi döner
         return jsonify({"status": "Error", "message": str(e)}), 
         
-# Kullanım verilerini tutmak için bir JSON dosyası
-USAGE_LOG_FILE = "usage_log.json"
+# Firebase 
+firebase_config = os.getenv("FIREBASE_CONFIG")
+if not firebase_config:
+    raise ValueError("Firebase yapılandırması bulunamadı. Lütfen 'FIREBASE_CONFIG' ortam değişkenini ayarlayın.")
 
-# Kullanım verilerini yükle
-def load_usage_data():
-    try:
-        with open(USAGE_LOG_FILE, "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return []
+# JSON string
+firebase_cred = json.loads(firebase_config)
 
-# Kullanım verilerini kaydet
-def save_usage_data(data):
-    with open(USAGE_LOG_FILE, "w") as f:
-        json.dump(data, f)
+# Firebase Admin
+cred = credentials.Certificate(firebase_cred)
+firebase_admin.initialize_app(cred, {
+    "databaseURL": "https://restrictioncheckerdb-default-rtdb.europe-west1.firebasedatabase.app"
+})
 
 @app.route("/log_usage", methods=["POST"])
 def log_usage():
-    usage_data = load_usage_data()
-    usage_data.append({"timestamp": datetime.now().isoformat()})
-    save_usage_data(usage_data)
-    return jsonify({"status": "success", "message": "Usage logged"})
+    try:
+        ref = db.reference("usage_logs")
+        ref.push({"timestamp": datetime.now().isoformat()})
+        return jsonify({"status": "success", "message": "Usage logged"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
 
 @app.route("/get_usage", methods=["GET"])
 def get_usage():
-    usage_data = load_usage_data()
-    return jsonify(usage_data)
+    try:
+        ref = db.reference("usage_logs")
+        data = ref.get()
+        if data:
+            usage_data = [{"timestamp": value["timestamp"]} for key, value in data.items()]
+            return jsonify(usage_data)
+        else:
+            return jsonify([])
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
 
 if __name__ == "__main__":
     app.run(debug=True)
